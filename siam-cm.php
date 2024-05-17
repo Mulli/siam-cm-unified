@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Siam Call Marker API
  * Description: Siam - Call Marker API, including: office (nana), application tests, siam-tours.com Elementor forms and phone number validation.
- * Version: 0.9
+ * Version: 0.94
  * Author: Mulli Bahr
  * Author URI:      https://site2goal.co.il
  * Text Domain:     siam
