@@ -7,11 +7,15 @@
 // and JS code on page
 
 function handle_siam_tours_cm_new_forms( $record, $handler ) {
+    //$f = the_field('cm_settings', 'option');
+    //error_log('handle_siam_tours_cm_new_forms CM SETTINGS '. print_r($f, true));
     
 	$form_name = $record->get_form_settings( 'form_name' );
     $raw_fields = $record->get( 'fields' );
     error_log('handle_siam_tours_cm_new_forms raw fields= '. print_r($raw_fields, true));
-    
+
+    //error_log('handle_siam_tours_cm_new_forms OPTION PAGE= '.print_r(acf_get_options_pages(), true));
+
     $fields = [];
 	foreach ( $raw_fields as $id => $field ) {
 		$fields[ $id ] = $field['value'];
@@ -167,11 +171,13 @@ function nana_form($record, $handler, $fields, $page_id){
         'passengers' => 'custom_field_7189'
     );
     
-    $arg = map_wp2cm_fields($fldmap, $fields, $arg);
+    //$arg = map_wp2cm_fields($fldmap, $fields, $arg);
 
     if (empty($fields['passengers']) ) // fill up passengers if empty
             $arg['custom_field_7189'] = 'לא ידוע';
     
+    $arg['funnel_id_4089'] = 'true'; // בתהליך
+
     // handle country code
     $arg = process_country_code($fields, $arg);
     
@@ -183,42 +189,41 @@ function nana_form($record, $handler, $fields, $page_id){
 function app_tests($record, $handler, $fields, $page_id){  
     $arg = array(
         'token' => $fields['token'], 
-        'campaign' => '9343', // $fields['campaign'], // '6776' - CM קוד סיאם טורס  '9343' - Code Mulli for testing
+        'campaign' => $fields['campaign'], // '6776' - CM קוד סיאם טורס  '9343' - Code Mulli for testing
         'crm_id' => 'APP-'.$page_id,
         'number' => $fields['phone'],
         'note' => $fields['message'],
-        'source' => $fields['source']??'app tests' // , 'reset' => 'true'
+        'source' => $fields['source'] ?? 'app tests' // , 'reset' => 'true'
     );
-    if ($fields['international'] == 'כן')
-        $arg['international'] = 'true';
+    
+    $arg = process_country_code($fields, $arg);
 
+        // Funnel Values && relevant link to CM custom field
     switch($fields['msg_type']){ // either or but not both!
-        case 'order':   $arg['custom_field_11073'] = $fields['link']; break;
-        case 'vouchers':$arg['custom_field_11074'] = $fields['link']; break;
+        case 'newlead':   
+                $arg['funnel_id_4089'] = 'true'; 
+                $arg['reset'] = 'true';
+            break;
+        case 'order':   
+            $arg['funnel_id_4091'] = 'true';
+            $arg['custom_field_11073'] = $fields['link']; // set order link to custom order field 
+            break;
+        case 'vouchers':
+            $arg['funnel_id_4092'] = 'true'; 
+            $arg['custom_field_11074'] = $fields['link']; // set vouchers link to vouchers order field 
+            break;
+        case 'summarysent':$arg['funnel_id_4093'] = 'true'; break;
+        case 'paymentplan':$arg['funnel_id_4094'] = 'true'; break;
+        case 'paymentcomplete':$arg['funnel_id_4095'] = 'true'; break;
         default: break; // ignore
     }
    
+    // handle country code
+    $arg = process_country_code($fields, $arg);
+    
     $res = siam_cm_send_request($fields['url'], $arg, 'online-response');
 
     display_online_cm_response($handler, $res, $fields, $arg, $page_id);
     return ;
 }
 
-// handle CallMarker response and display it on screen online for nana form & app tests
-function display_online_cm_response($handler, $res, $fields, $arg, $page_id, $type='nana'){
-    if (isset($res['status']) && $res['status'] == 'success'){
-        $str = ($type == 'nana') ?  $res['message'] : $fields['link'];
-        $html_msg = '<span style="color:green"> ' . $str . ' [ ' . $page_id . ' , ' . $arg['number']. ' ]' . '</span>';
-        siam_response_message($handler, $html_msg);
-    } else {
-        error_log('handle_nana_form CM return FAIL = ' . print_r($res, true) . '  arg='. print_r($arg, true));
-        $cm_response = isset($res) ? $res['message'] : ' סיבה לא ידועה';
-        siam_response_message($handler, '<span style="color:red" id="cm-fail">קול מרקר סירוב: ' . $cm_response . '</span>');
-    }
-    error_log('app_tests CM RESPONSE=' . print_r($res, true) . ' SENT ARG='. print_r($arg, true) . ' FORM FIELDS='. print_r($fields, true));
-    return ;     
-}
-// make sure response tage 'siam_cm_response' is in sync with JS and displayed on screen
-function siam_response_message($handler, $str){
-    return $handler->add_response_data( 'siam_cm_response', $str);   
-}

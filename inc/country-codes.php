@@ -474,15 +474,36 @@ $country_letter_codes = [
 // add internation code country to number & international flag set to true
 // if Israeli number just plain number without country code prefix & NO international flag added
 function process_country_code($fields, $arg){
-    $ccode = trim($fields['countrycode']);
-    $ccode = str_replace('+', '', $ccode);
-    if (!empty($ccode) && $ccode != '972'  ){ // get country code value
-        $n = trim($fields['phone']);
-        // remove leading 0 from phone number if exists && length is 10
-            if (strlen($n) == 10 && $n[0] == '0')
-                $n = ltrim($n, '0');
-            $arg['number'] = /*'+' .*/ $ccode . $n; // add country code to phone number
-            $arg['international']= 'true';
-    }
+	if (isset($fields['countrycode']) && !empty($fields['countrycode'])){ // old forms
+    	$ccode = clean_phone_number($fields['countrycode']);
+
+		if (!empty($ccode) && $ccode != '972'  ){ // get country code value
+			$n = clean_phone_number($fields['phone']);
+			// remove leading 0 from phone number if exists && length is 10
+			if (strlen($n) == 10 && $n[0] == '0')
+				$n = ltrim($n, '0');
+			$arg['number'] = /*'+' .*/ $ccode . $n; // add country code to phone number
+			$arg['international']= 'true';
+		} else {
+		    $n = clean_phone_number($fields['phone']);
+        	$n = str_replace('972', '', $n);
+            $arg['number'] = $n; // NO country code to phone number
+		    //$arg['international']= 'true';
+		}
+	} else{ // new forms
+		$n = clean_phone_number($fields['phone']);
+		
+		// remove leading 0 from phone number if exists && length is 10
+		//if (strlen($n) == 10 && $n[0] == '0')
+		//	$n = ltrim($n, '0');
+		$arg['number'] = /*'+' .*/  $n; // add country code to phone number
+		$arg['international']= 'true';
+	}
     return $arg;
+}
+function clean_phone_number($str){
+    $n = trim($str);
+	$n = str_replace('+', '', $n);
+	$n = str_replace('-', '', $n);
+    return $n;
 }
